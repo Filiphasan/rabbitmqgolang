@@ -1,0 +1,38 @@
+﻿version: '3.8'
+
+name: rabbitmq-golang
+
+volumes:
+    rabbitmq_data:
+      driver: local
+    
+services:
+  rabbitmq:
+    container_name: rabbitmq
+    build:
+      context: .
+      dockerfile: Dockerfiles/RabbitMq/Dockerfile
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbitmq
+      RABBITMQ_DEFAULT_PASS: 00PQp6P8iD0HtTpGQ98kS04rU3Fkd2
+    ports:
+      - "5672:5672"    # RabbitMQ bağlantı portu
+      - "15672:15672"  # RabbitMQ yönetim paneli portu
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  api:
+    build:
+      context: .
+      dockerfile: cmd/api/Dockerfile
+    container_name: rabbitmq-golang-api
+    restart: always
+    ports:
+      - "5001:8080"
+    volumes:
+      - go-minify-url:/go/src
+    depends_on:
+      - mongodb
+    environment:
+      - APP_ENV=docker

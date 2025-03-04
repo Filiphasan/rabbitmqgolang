@@ -1,0 +1,10 @@
+﻿{
+  "projectName": "RabbitMQ Golang Example",
+  "rabbitMq": {
+    "host": "localhost",
+    "port": 5672,
+    "user": "guest",
+    "password": "guest",
+    "connectionName": "RabbitMQ Golang"
+  }
+}
