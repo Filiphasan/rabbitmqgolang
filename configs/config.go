@@ -20,7 +20,7 @@ type AppConfig struct {
 
 var appConfig *AppConfig
 
-func LoadConfig() {
+func LoadConfig() *AppConfig {
 	environment := os.Getenv("APP_ENV")
 	if environment == "" {
 		environment = "development"
@@ -52,6 +52,7 @@ func LoadConfig() {
 	}
 
 	appConfig.Environment = environment
+	return appConfig
 }
 
 func GetConfig() *AppConfig {

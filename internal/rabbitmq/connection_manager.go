@@ -74,3 +74,14 @@ func (c *ConnectionManager) Connect() error {
 
 	return nil
 }
+
+func (c *ConnectionManager) Close() {
+	if c.cnn != nil {
+		err := c.cnn.Close()
+		if err != nil {
+			c.logger.Error("Failed to close RabbitMQ connection", zap.Error(err))
+		} else {
+			c.logger.Info("RabbitMQ connection closed")
+		}
+	}
+}

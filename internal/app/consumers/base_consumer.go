@@ -8,6 +8,11 @@ import (
 	"go.uber.org/zap"
 )
 
+type IBaseConsumer[T interface{}] interface {
+	StartConsuming() error
+	Close()
+}
+
 type BaseConsumer[T interface{}] struct {
 	channel  *amqp091.Channel
 	Logger   *zap.Logger
