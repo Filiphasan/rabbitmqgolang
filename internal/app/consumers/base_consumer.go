@@ -32,14 +32,14 @@ func NewBaseConsumer[T interface{}](logger *zap.Logger, cm *rabbitmq.ConnectionM
 	}
 }
 
-func (c *BaseConsumer[T]) ConsumeMessage(message *T) (*models.ConsumeResult, error) {
+func (bc *BaseConsumer[T]) ConsumeMessage(message *T) (*models.ConsumeResult, error) {
 	return nil, nil
 }
 
-func (c *BaseConsumer[T]) initializeChannel() error {
-	channel, err := c.cm.CreateChannel()
+func (bc *BaseConsumer[T]) initializeChannel() error {
+	channel, err := bc.cm.CreateChannel()
 	if err != nil {
-		c.Logger.Error("Failed to create channel", zap.Error(err))
+		bc.Logger.Error("Failed to create channel", zap.Error(err))
 		return err
 	}
 
@@ -47,61 +47,61 @@ func (c *BaseConsumer[T]) initializeChannel() error {
 	channel.NotifyClose(closeChannel)
 	go func() {
 		for err := range closeChannel {
-			c.Logger.Error("Channel closed", zap.Error(err), zap.String("queue", c.Queue.Name))
+			bc.Logger.Error("Channel closed", zap.Error(err), zap.String("queue", bc.Queue.Name))
 		}
 	}()
 
-	c.channel = channel
+	bc.channel = channel
 	return nil
 }
 
-func (c *BaseConsumer[T]) declareQueueAmdExchange() (amqp091.Queue, error) {
-	queue, err := c.channel.QueueDeclare(
-		c.Queue.Name,
-		c.Queue.Durable,
-		c.Queue.AutoDelete,
-		c.Queue.Exclusive,
+func (bc *BaseConsumer[T]) declareQueueAmdExchange() (amqp091.Queue, error) {
+	queue, err := bc.channel.QueueDeclare(
+		bc.Queue.Name,
+		bc.Queue.Durable,
+		bc.Queue.AutoDelete,
+		bc.Queue.Exclusive,
 		false,
-		c.Queue.Arguments)
+		bc.Queue.Arguments)
 	if err != nil {
-		c.Logger.Error("Failed to declare queue", zap.Error(err), zap.String("queue", c.Queue.Name))
+		bc.Logger.Error("Failed to declare queue", zap.Error(err), zap.String("queue", bc.Queue.Name))
 		return amqp091.Queue{}, err
 	}
 
-	if c.Exchange.Name != "" {
-		err = c.channel.ExchangeDeclare(
-			c.Exchange.Name,
-			c.Exchange.Exchange,
-			c.Exchange.Durable,
+	if bc.Exchange.Name != "" {
+		err = bc.channel.ExchangeDeclare(
+			bc.Exchange.Name,
+			bc.Exchange.Exchange,
+			bc.Exchange.Durable,
 			false,
 			false,
 			false,
-			c.Exchange.Arguments,
+			bc.Exchange.Arguments,
 		)
 		if err != nil {
-			c.Logger.Error("Failed to declare exchange", zap.Error(err))
+			bc.Logger.Error("Failed to declare exchange", zap.Error(err))
 			return amqp091.Queue{}, err
 		}
 
-		err = c.channel.QueueBind(c.Queue.Name, c.Exchange.RoutingKey, c.Exchange.Name, false, nil)
+		err = bc.channel.QueueBind(bc.Queue.Name, bc.Exchange.RoutingKey, bc.Exchange.Name, false, nil)
 		if err != nil {
-			c.Logger.Error("Failed to bind queue to exchange", zap.Error(err), zap.String("queue", c.Queue.Name), zap.String("exchange", c.Exchange.Name))
+			bc.Logger.Error("Failed to bind queue to exchange", zap.Error(err), zap.String("queue", bc.Queue.Name), zap.String("exchange", bc.Exchange.Name))
 			return amqp091.Queue{}, err
 		}
 	}
 
-	if c.Retry.UseRetry {
-		delayedExName := c.Queue.Name + "_retry"
-		err = c.channel.ExchangeDeclare(delayedExName, "x-delayed-message", true, false, false, false, amqp091.Table{
+	if bc.Retry.UseRetry {
+		delayedExName := bc.Queue.Name + "_retry"
+		err = bc.channel.ExchangeDeclare(delayedExName, "x-delayed-message", true, false, false, false, amqp091.Table{
 			"x-delayed-type": "direct",
 		})
 		if err != nil {
-			c.Logger.Error("Failed to declare delayed exchange", zap.Error(err))
+			bc.Logger.Error("Failed to declare delayed exchange", zap.Error(err))
 			return amqp091.Queue{}, err
 		}
-		err = c.channel.QueueBind(c.Queue.Name, "", delayedExName, false, nil)
+		err = bc.channel.QueueBind(bc.Queue.Name, "", delayedExName, false, nil)
 		if err != nil {
-			c.Logger.Error("Failed to bind queue to delayed exchange", zap.Error(err), zap.String("queue", c.Queue.Name), zap.String("exchange", delayedExName))
+			bc.Logger.Error("Failed to bind queue to delayed exchange", zap.Error(err), zap.String("queue", bc.Queue.Name), zap.String("exchange", delayedExName))
 			return amqp091.Queue{}, err
 		}
 	}
@@ -109,98 +109,98 @@ func (c *BaseConsumer[T]) declareQueueAmdExchange() (amqp091.Queue, error) {
 	return queue, nil
 }
 
-func (c *BaseConsumer[T]) StartConsuming() error {
-	err := c.initializeChannel()
+func (bc *BaseConsumer[T]) StartConsuming() error {
+	err := bc.initializeChannel()
 	if err != nil {
-		c.Logger.Error("Failed to initialize channel", zap.Error(err))
+		bc.Logger.Error("Failed to initialize channel", zap.Error(err))
 		return err
 	}
 
-	_, err = c.declareQueueAmdExchange()
+	_, err = bc.declareQueueAmdExchange()
 	if err != nil {
-		c.Logger.Error("Failed to declare queue and exchange", zap.Error(err), zap.String("queue", c.Queue.Name))
+		bc.Logger.Error("Failed to declare queue and exchange", zap.Error(err), zap.String("queue", bc.Queue.Name))
 		return err
 	}
 
-	err = c.channel.Qos(0, 1, false)
+	err = bc.channel.Qos(0, 1, false)
 	if err != nil {
-		c.Logger.Error("Failed to set QoS", zap.Error(err), zap.String("queue", c.Queue.Name))
+		bc.Logger.Error("Failed to set QoS", zap.Error(err), zap.String("queue", bc.Queue.Name))
 		return err
 	}
 
-	messages, err := c.channel.Consume(c.Queue.Name, "", false, c.Queue.Exclusive, false, false, nil)
+	messages, err := bc.channel.Consume(bc.Queue.Name, "", false, bc.Queue.Exclusive, false, false, nil)
 	if err != nil {
-		c.Logger.Error("Failed to consume messages", zap.Error(err), zap.String("queue", c.Queue.Name))
+		bc.Logger.Error("Failed to consume messages", zap.Error(err), zap.String("queue", bc.Queue.Name))
 		return err
 	}
 
 	go func() {
 		for d := range messages {
-			c.handleMessage(d)
+			bc.handleMessage(d)
 		}
 	}()
 
-	c.Logger.Info("Consumer started", zap.String("queue", c.Queue.Name))
+	bc.Logger.Info("Consumer started", zap.String("queue", bc.Queue.Name))
 	return nil
 }
 
-func (c *BaseConsumer[T]) handleMessage(d amqp091.Delivery) {
+func (bc *BaseConsumer[T]) handleMessage(d amqp091.Delivery) {
 	var msg T
 	err := json.Unmarshal(d.Body, &msg)
 	if err != nil {
-		c.retryOrRejectMessage(d, 0)
+		bc.retryOrRejectMessage(d, 0)
 		return
 	}
 
-	cResult, err := c.ConsumeMessage(&msg)
+	cResult, err := bc.ConsumeMessage(&msg)
 	if err != nil {
-		c.retryOrRejectMessage(d, 0)
+		bc.retryOrRejectMessage(d, 0)
 	} else if cResult != nil && cResult.Result == models.Retry {
-		c.retryOrRejectMessage(d, cResult.DelayMs)
-	} else if cResult != nil && cResult.Result == models.Delay && c.Retry.UseRetry {
-		c.delayMessage(d, cResult.DelayMs)
+		bc.retryOrRejectMessage(d, cResult.DelayMs)
+	} else if cResult != nil && cResult.Result == models.Delay && bc.Retry.UseRetry {
+		bc.delayMessage(d, cResult.DelayMs)
 	} else {
 		_ = d.Ack(false)
 	}
 
-	c.Logger.Info("Received a message", zap.String("body", string(d.Body)), zap.String("queue", c.Queue.Name))
+	bc.Logger.Info("Received a message", zap.String("body", string(d.Body)), zap.String("queue", bc.Queue.Name))
 }
 
-func (c *BaseConsumer[T]) delayMessage(d amqp091.Delivery, delayMs int) {
-	if !c.Retry.UseRetry {
+func (bc *BaseConsumer[T]) delayMessage(d amqp091.Delivery, delayMs int) {
+	if !bc.Retry.UseRetry {
 		err := d.Reject(false)
 		if err != nil {
-			c.Logger.Error("Failed to reject message", zap.Error(err), zap.String("queue", c.Queue.Name), zap.String("message", string(d.Body)), zap.String("message_id", d.MessageId))
+			bc.Logger.Error("Failed to reject message", zap.Error(err), zap.String("queue", bc.Queue.Name), zap.String("message", string(d.Body)), zap.String("message_id", d.MessageId))
 		}
 		return
 	}
 
 	if delayMs <= 0 {
-		delayMs = c.Retry.Delay
+		delayMs = bc.Retry.Delay
 	}
-	delayedExName := c.Queue.Name + "_retry"
+	delayedExName := bc.Queue.Name + "_retry"
 	d.Headers["x-delay"] = delayMs
-	err := c.channel.Publish(delayedExName, "", false, false, amqp091.Publishing{
+	err := bc.channel.Publish(delayedExName, "", false, false, amqp091.Publishing{
 		ContentType: "application/json",
 		Body:        d.Body,
 	})
 	if err != nil {
-		c.Logger.Error("Failed to publish message to retry exchange", zap.Error(err), zap.String("queue", c.Queue.Name), zap.String("message", string(d.Body)), zap.String("message_id", d.MessageId))
+		bc.Logger.Error("Failed to publish message to retry exchange", zap.Error(err), zap.String("queue", bc.Queue.Name), zap.String("message", string(d.Body)), zap.String("message_id", d.MessageId))
 		return
 	}
 
 	err = d.Ack(false)
 	if err != nil {
-		c.Logger.Error("Failed to acknowledge message", zap.Error(err), zap.String("queue", c.Queue.Name), zap.String("message", string(d.Body)), zap.String("message_id", d.MessageId))
+		bc.Logger.Error("Failed to acknowledge message", zap.Error(err), zap.String("queue", bc.Queue.Name), zap.String("message", string(d.Body)), zap.String("message_id", d.MessageId))
 		return
 	}
 }
 
-func (c *BaseConsumer[T]) retryOrRejectMessage(d amqp091.Delivery, delayMs int) {
-	if !c.Retry.UseRetry {
+func (bc *BaseConsumer[T]) retryOrRejectMessage(d amqp091.Delivery, delayMs int) {
+	if !bc.Retry.UseRetry {
 		err := d.Reject(false)
 		if err != nil {
-			c.Logger.Error("Failed to reject message", zap.Error(err), zap.String("queue", c.Queue.Name), zap.String("message", string(d.Body)), zap.String("message_id", d.MessageId))
+			bc.Logger.Error("Failed to reject message", zap.Error(err), zap.String("queue", bc.Queue.Name), zap.String("message", string(d.Body)), zap.String("message_id", d.MessageId))
 		}
 		return
 	}
@@ -210,25 +210,25 @@ func (c *BaseConsumer[T]) retryOrRejectMessage(d amqp091.Delivery, delayMs int) 
 		currentRetryCount = count
 	}
 
-	if currentRetryCount > c.Retry.MaxRetry {
+	if currentRetryCount > bc.Retry.MaxRetry {
 		err := d.Reject(false)
 		if err != nil {
-			c.Logger.Error("Failed to reject message", zap.Error(err), zap.String("queue", c.Queue.Name), zap.String("message", string(d.Body)), zap.String("message_id", d.MessageId))
+			bc.Logger.Error("Failed to reject message", zap.Error(err), zap.String("queue", bc.Queue.Name), zap.String("message", string(d.Body)), zap.String("message_id", d.MessageId))
 		}
 		return
 	}
 
 	d.Headers["x-retry-count"] = currentRetryCount + 1
-	c.delayMessage(d, delayMs)
+	bc.delayMessage(d, delayMs)
 }
 
-func (c *BaseConsumer[T]) Close() {
-	if c.channel == nil || c.channel.IsClosed() {
+func (bc *BaseConsumer[T]) Close() {
+	if bc.channel == nil || bc.channel.IsClosed() {
 		return
 	}
 
-	err := c.channel.Close()
+	err := bc.channel.Close()
 	if err != nil {
-		c.Logger.Error("Failed to close channel", zap.Error(err), zap.String("queue", c.Queue.Name))
+		bc.Logger.Error("Failed to close channel", zap.Error(err), zap.String("queue", bc.Queue.Name))
 	}
 }

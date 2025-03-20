@@ -20,7 +20,7 @@ func NewMqService(cm *rabbitmq.ConnectionManager, logger *zap.Logger) *MqService
 	}
 }
 
-func (m *MqService) SendMessage(ctx context.Context, model interfaces.SendMessageModel) error {
+func (m *MqService) SendMessage(ctx context.Context, model *interfaces.SendMessageModel) error {
 	channel, err := m.cm.CreateChannel()
 	if err != nil {
 		return err
@@ -47,7 +47,7 @@ func (m *MqService) SendMessage(ctx context.Context, model interfaces.SendMessag
 	return nil
 }
 
-func (m *MqService) PublishMessage(ctx context.Context, model interfaces.PublishMessageModel) error {
+func (m *MqService) PublishMessage(ctx context.Context, model *interfaces.PublishMessageModel) error {
 	channel, err := m.cm.CreateChannel()
 	if err != nil {
 		return err

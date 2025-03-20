@@ -14,10 +14,21 @@ func UseLogger(appConfig *configs.AppConfig) *zap.Logger {
 	encoderConfig.MessageKey = "Message"
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
-	core := zapcore.NewCore(zapcore.NewJSONEncoder(encoderConfig), zapcore.AddSync(os.Stdout), zap.InfoLevel)
+	var writeSyncer []zapcore.WriteSyncer
+	writeSyncer = append(writeSyncer, zapcore.AddSync(os.Stdout))
+	//writeSyncer = append(writeSyncer, elasticSync)
+
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(encoderConfig),
+		zapcore.NewMultiWriteSyncer(writeSyncer...),
+		zap.InfoLevel,
+	)
 
 	logger := zap.New(core)
-	logger = logger.With(zap.String("ProjectName", appConfig.ProjectName), zap.String("Environment", appConfig.Environment))
+	logger = logger.With(
+		zap.String("ProjectName", appConfig.ProjectName),
+		zap.String("Environment", appConfig.Environment),
+	)
 
 	zap.ReplaceGlobals(logger)
 	zap.RedirectStdLog(logger)
