@@ -78,7 +78,7 @@ type BasicRequest struct {
 }
 
 func RouteBasicEndpoint(router *gin.Engine, mqService *implementations.MqService) {
-	router.GET("/api/queue/send", func(c *gin.Context) {
+	router.POST("/api/queue/send", func(c *gin.Context) {
 		request := &BasicRequest{}
 		err := c.ShouldBindJSON(request)
 		if err != nil {
@@ -105,7 +105,7 @@ func RouteBasicEndpoint(router *gin.Engine, mqService *implementations.MqService
 		c.JSON(200, gin.H{"message": "Message sent successfully"})
 	})
 
-	router.GET("/api/queue/publish", func(c *gin.Context) {
+	router.POST("/api/queue/publish", func(c *gin.Context) {
 		request := &BasicRequest{}
 		err := c.ShouldBindJSON(request)
 		if err != nil {
